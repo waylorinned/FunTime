@@ -15,22 +15,21 @@
             position: absolute; top: 0; left: 0; width: 100%; height: 100%;
             background: url('https://minecraft.wiki/images/Dirt_JE4_BE3.png') repeat;
             background-size: 64px 64px; display: flex; flex-direction: column;
-            align-items: center; padding: 20px; z-index: 10;
+            align-items: center; padding: 20px; z-index: 20;
         }
         .menu-header { text-align: center; background: rgba(0, 0, 0, 0.7); padding: 10px 20px; border: 4px solid #555; margin-bottom: 20px; width: 90%; max-width: 600px; }
         .menu-header h1 { font-size: 36px; color: #ffaa00; text-shadow: 2px 2px 0 #000; }
         .menu-header p { font-size: 20px; color: #aaa; }
+        
         .server-list { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 10px; width: 100%; max-width: 1200px; overflow-y: auto; padding-bottom: 50px; touch-action: pan-y; }
         .server-card { background: rgba(0, 0, 0, 0.8); border: 2px solid #333; padding: 15px; cursor: pointer; display: flex; flex-direction: column; }
         .server-top-row { display: flex; justify-content: space-between; align-items: center; }
         .server-name { font-size: 24px; font-weight: bold; }
-        
         .pin-btn { font-size: 28px; color: #555; cursor: pointer; transition: 0.2s; }
         .pin-btn.pinned { color: #ffd700; text-shadow: 0 0 10px #ffaa00; }
-        
         .server-online { color: #55ff55; font-size: 18px; margin-top: 5px; }
 
-        #queue-modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0, 0, 0, 0.85); z-index: 20; justify-content: center; align-items: center; }
+        #queue-modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0, 0, 0, 0.85); z-index: 30; justify-content: center; align-items: center; }
         .modal-content { background: #222; border: 4px solid #555; padding: 20px; text-align: center; }
         .modal-content h2 { color: #ff5555; font-size: 28px; margin-bottom: 10px; }
         .cancel-btn { background: #444; border: 2px solid #000; color: #fff; padding: 10px 20px; font-family: inherit; font-size: 18px; cursor: pointer; }
@@ -38,6 +37,9 @@
         /* --- ИГРА --- */
         #game-ui { display: none; position: absolute; top: 0; left: 0; width: 100%; height: 100%; z-index: 5; touch-action: none; pointer-events: none; }
         
+        #cmd-spawn { position: absolute; top: 10px; left: 50%; transform: translateX(-50%); background: rgba(0,0,0,0.7); border: 2px solid #555; color: #fff; padding: 5px 20px; font-family: inherit; font-size: 20px; cursor: pointer; pointer-events: auto; z-index: 15; }
+        #cmd-spawn:active { background: rgba(50,50,50,0.9); border-color: #fff; }
+
         #crosshair { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); color: rgba(255,255,255,0.7); font-size: 24px; font-family: sans-serif; }
         #balance-ui { position: absolute; top: 10px; right: 10px; background: rgba(0,0,0,0.5); padding: 5px 10px; font-size: 22px; color: #ffd700; border: 2px solid #333; }
         #stats-ui { position: absolute; bottom: 65px; left: 50%; transform: translateX(-50%); display: flex; justify-content: space-between; width: 320px; font-size: 16px; }
@@ -45,14 +47,16 @@
         .slot { width: 34px; height: 34px; background: rgba(255,255,255,0.1); border: 2px solid #555; }
         .slot.active { border: 2px solid #fff; }
 
-        #chat-container { position: absolute; top: 10px; left: 10px; width: 70%; max-width: 300px; height: 180px; background: rgba(0, 0, 0, 0.4); padding: 5px; overflow-y: hidden; display: flex; flex-direction: column; justify-content: flex-end; }
+        #chat-container { position: absolute; top: 50px; left: 10px; width: 70%; max-width: 300px; height: 180px; background: rgba(0, 0, 0, 0.4); padding: 5px; overflow-y: hidden; display: flex; flex-direction: column; justify-content: flex-end; }
         .chat-message { font-size: 16px; line-height: 1.1; margin-bottom: 4px; text-shadow: 1px 1px 0 #000; word-wrap: break-word; }
         .chat-rank-hero { color: #ff55ff; } .chat-rank-holy { color: #ffff55; } .chat-name { color: #ffffff; }
+
+        /* ГОЛОГРАММЫ */
+        .hologram { position: absolute; top: 0; left: 0; text-align: center; font-size: 18px; font-weight: bold; text-shadow: 1px 1px 0 #000, -1px -1px 0 #000, 1px -1px 0 #000, -1px 1px 0 #000; pointer-events: none; z-index: 5; width: 250px; line-height: 1.2; }
 
         /* Зоны управления (Сенсор) */
         #touch-zones { position: absolute; top: 0; left: 0; width: 100%; height: 100%; display: flex; z-index: 10; pointer-events: auto; }
         .joystick-area { width: 50%; height: 100%; position: relative; }
-        
         #joystick-base { display: none; position: absolute; width: 100px; height: 100px; background: rgba(255,255,255,0.1); border: 2px solid rgba(255,255,255,0.3); border-radius: 50%; transform: translate(-50%, -50%); pointer-events: none; }
         #joystick-stick { position: absolute; top: 50%; left: 50%; width: 40px; height: 40px; background: rgba(255,255,255,0.5); border-radius: 50%; transform: translate(-50%, -50%); pointer-events: none; }
     </style>
@@ -81,6 +85,7 @@
             <div class="joystick-area" id="zone-move"><div id="joystick-base"><div id="joystick-stick"></div></div></div>
             <div class="joystick-area" id="zone-look"></div>
         </div>
+        <button id="cmd-spawn">/spawn</button>
         <div id="crosshair">十</div>
         <div id="balance-ui">💰 1 500 ⛃</div>
         <div id="chat-container"></div>
@@ -96,13 +101,12 @@
     </div>
 
     <script>
-        // --- 1. ГЕНЕРАЦИЯ БОТОВ (ДИНАМИЧЕСКАЯ) ---
+        // --- 1. ГЕНЕРАЦИЯ БОТОВ (ДНК) ---
         const BOTS_COUNT = 200;
         window.activeBots = [];
-
         const prefixes = ["zxc_", "PvP_", "Pro_", "lil_", "xX_", "", "", ""];
-        const roots = ["Killer", "Bebra", "Dimon", "Kroshka", "Nagibator", "Toster", "Voin", "Ded", "Griefer", "Sigma", "Ponpon"];
-        const suffixes = ["_228", "1337", "2010", "_god", "Ez", "Pro", "", "", ""];
+        const roots = ["Killer", "Bebra", "Dimon", "Kroshka", "Nagibator", "Toster", "Voin", "Ded", "Griefer", "Sigma"];
+        const suffixes = ["_228", "1337", "2010", "_god", "Ez", "Pro", "", ""];
         const ranks = [{ name: "Игрок", class: "" }, { name: "Hero", class: "chat-rank-hero" }, { name: "Holy", class: "chat-rank-holy" }];
 
         function generateName() {
@@ -112,24 +116,17 @@
             return p + r + s + (Math.random() > 0.5 ? Math.floor(Math.random()*99) : "");
         }
 
-        function generateBotPersonality(index) {
-            const combatSkill = Math.floor(Math.random() * 3); 
-            const wealth = Math.floor(Math.random() * 3);
-            const morality = Math.floor(Math.random() * 3);
-            
-            return {
-                id: index,
-                name: generateName(),
-                rank: ranks[Math.random() > 0.7 ? Math.floor(Math.random() * ranks.length) : 0],
-                stats: { pvp: combatSkill, wealth: wealth, cheater: (morality === 0) ? 2 : 0 }
-            };
-        }
-
         function initBots() {
-            for(let i = 0; i < BOTS_COUNT; i++) activeBots.push(generateBotPersonality(i));
+            for(let i = 0; i < BOTS_COUNT; i++) {
+                activeBots.push({
+                    id: i, name: generateName(),
+                    rank: ranks[Math.random() > 0.7 ? Math.floor(Math.random() * ranks.length) : 0],
+                    stats: { pvp: Math.floor(Math.random() * 3), wealth: Math.floor(Math.random() * 3) }
+                });
+            }
         }
 
-        // --- 2. ЛОГИКА МЕНЮ (С ИСПОЛЬЗОВАНИЕМ LOCALSTORAGE) ---
+        // --- 2. ЛОГИКА МЕНЮ С ПАМЯТЬЮ (LOCALSTORAGE) ---
         const totalServers = 250;
         const playableServer = 216;
         const serverList = document.getElementById('server-list');
@@ -137,7 +134,6 @@
         let queueInterval;
         let totalOnlineCounter = 0;
 
-        // Загружаем сохраненные сервера из памяти браузера
         let pinnedServers = JSON.parse(localStorage.getItem('ft_pinned_servers') || '[]');
 
         for (let i = 1; i <= totalServers; i++) {
@@ -148,12 +144,10 @@
             totalOnlineCounter += online;
 
             const isPinned = pinnedServers.includes(i);
-            const pinnedClass = isPinned ? 'pinned' : '';
-
             card.innerHTML = `
                 <div class="server-top-row">
                     <div class="server-name">Анархия-${i}</div>
-                    <div class="pin-btn ${pinnedClass}">★</div>
+                    <div class="pin-btn ${isPinned ? 'pinned' : ''}">★</div>
                 </div>
                 <div class="server-online">Онлайн: ${online} / 250</div>
             `;
@@ -162,14 +156,8 @@
                 e.stopPropagation(); 
                 const btn = e.target;
                 const currentlyPinned = btn.classList.toggle('pinned');
-                
-                if (currentlyPinned) {
-                    if (!pinnedServers.includes(i)) pinnedServers.push(i);
-                } else {
-                    pinnedServers = pinnedServers.filter(id => id !== i);
-                }
-                
-                // Сохраняем в память
+                if (currentlyPinned) { if (!pinnedServers.includes(i)) pinnedServers.push(i); } 
+                else { pinnedServers = pinnedServers.filter(id => id !== i); }
                 localStorage.setItem('ft_pinned_servers', JSON.stringify(pinnedServers));
                 sortServers();
             };
@@ -178,8 +166,6 @@
             serverList.appendChild(card);
         }
         document.getElementById('total-online').innerText = totalOnlineCounter;
-
-        // Сортируем один раз при загрузке, чтобы закрепленные сразу были сверху
         sortServers();
 
         function sortServers() {
@@ -206,34 +192,98 @@
         }
         function closeQueue() { queueModal.style.display = 'none'; clearInterval(queueInterval); }
 
-        // --- 3. 3D И СЕНСОРНОЕ УПРАВЛЕНИЕ ---
+        // --- 3. 3D ДВИЖОК: ФИЗИКА, ГОЛОГРАММЫ И МИРЫ ---
         let scene, camera, renderer, yawObject, pitchObject;
         let moveData = { active: false, id: null, originX: 0, originY: 0, x: 0, y: 0 };
         let lookData = { active: false, id: null, lastX: 0, lastY: 0 };
         const keys = { w: false, a: false, s: false, d: false }; 
 
+        // Игровые переменные
+        let currentWorld = 'spawn'; // 'spawn' или 'wild'
+        let velocityY = 0;
+        let playerBalance = 1500;
+        let lastMineTime = 0;
+        let lastRtpTime = 0;
+
+        let spawnGroup, wildGroup;
+        const holograms = [];
+
+        function addHologram(text, color, position, worldContext) {
+            const el = document.createElement('div');
+            el.className = 'hologram';
+            el.innerHTML = text;
+            el.style.color = color;
+            document.getElementById('game-ui').appendChild(el);
+            holograms.push({ element: el, position: position, world: worldContext });
+        }
+
         function initThreeJS() {
-            scene = new THREE.Scene(); scene.background = new THREE.Color(0x87CEEB); scene.fog = new THREE.Fog(0x87CEEB, 5, 40);
+            scene = new THREE.Scene(); scene.background = new THREE.Color(0x87CEEB); scene.fog = new THREE.Fog(0x87CEEB, 10, 60);
             camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
             renderer = new THREE.WebGLRenderer({ antialias: false });
             renderer.setSize(window.innerWidth, window.innerHeight);
-            
             renderer.domElement.style.position = 'absolute'; renderer.domElement.style.top = '0'; renderer.domElement.style.zIndex = '-1';
             document.getElementById('game-ui').appendChild(renderer.domElement);
 
             const light = new THREE.HemisphereLight(0xffffff, 0x444444); light.position.set(0, 200, 0); scene.add(light);
-            const floor = new THREE.Mesh(new THREE.PlaneGeometry(100, 100), new THREE.MeshLambertMaterial({ color: 0x555555 }));
-            floor.rotation.x = -Math.PI / 2; scene.add(floor);
-            const spawnPlatform = new THREE.Mesh(new THREE.BoxGeometry(10, 1, 10), new THREE.MeshLambertMaterial({ color: 0x888888 }));
-            spawnPlatform.position.y = 0.5; scene.add(spawnPlatform);
-            const chest = new THREE.Mesh(new THREE.BoxGeometry(1, 1, 1), new THREE.MeshLambertMaterial({ color: 0x8B4513 }));
-            chest.position.set(0, 1.5, -4); scene.add(chest);
 
+            // === ГРУППА СПАВНА ===
+            spawnGroup = new THREE.Group();
+            scene.add(spawnGroup);
+
+            // Безопасная платформа спавна (40x40)
+            const spawnFloor = new THREE.Mesh(new THREE.BoxGeometry(40, 1, 40), new THREE.MeshLambertMaterial({ color: 0xdddddd }));
+            spawnFloor.position.y = 0;
+            spawnGroup.add(spawnFloor);
+
+            // Арена СС (Спрыг вниз) (100x100)
+            const arenaFloor = new THREE.Mesh(new THREE.BoxGeometry(100, 1, 100), new THREE.MeshLambertMaterial({ color: 0x660000 }));
+            arenaFloor.position.y = -10;
+            spawnGroup.add(arenaFloor);
+            addHologram('АРЕНА СС<br><span style="font-size:14px;color:#ff5555">PvP Включено!</span>', '#ff0000', new THREE.Vector3(0, -5, 25), 'spawn');
+
+            // РТП Портал
+            const rtpMesh = new THREE.Mesh(new THREE.BoxGeometry(2, 3, 2), new THREE.MeshLambertMaterial({ color: 0x00aaff, transparent: true, opacity: 0.6 }));
+            rtpMesh.position.set(0, 2, -15);
+            spawnGroup.add(rtpMesh);
+            addHologram('РТП (Телепорт)<br><span style="font-size:12px;color:#ccc">Зайдите внутрь</span>', '#00ffff', new THREE.Vector3(0, 4.5, -15), 'spawn');
+
+            // Автошахта
+            const mineMesh = new THREE.Mesh(new THREE.BoxGeometry(6, 1.1, 6), new THREE.MeshLambertMaterial({ color: 0x555555 }));
+            mineMesh.position.set(-12, 0.5, 0);
+            spawnGroup.add(mineMesh);
+            addHologram('Автошахта<br><span style="font-size:12px;color:#ccc">Фарм монет</span>', '#aaaaaa', new THREE.Vector3(-12, 2.5, 0), 'spawn');
+
+            // Аукцион NPC
+            const ahMesh = new THREE.Mesh(new THREE.BoxGeometry(1.5, 2, 1.5), new THREE.MeshLambertMaterial({ color: 0xffaa00 }));
+            ahMesh.position.set(12, 1.5, 0);
+            spawnGroup.add(ahMesh);
+            addHologram('Аукцион /ah<br><span style="font-size:12px;color:#ccc">Скупщик</span>', '#ffff55', new THREE.Vector3(12, 3.5, 0), 'spawn');
+
+            // === ГРУППА ДИКОГО МИРА ===
+            wildGroup = new THREE.Group();
+            scene.add(wildGroup);
+            const wildFloor = new THREE.Mesh(new THREE.PlaneGeometry(2000, 2000), new THREE.MeshLambertMaterial({ color: 0x2d5a27 }));
+            wildFloor.rotation.x = -Math.PI / 2;
+            wildGroup.add(wildFloor);
+            wildGroup.visible = false; // Скрыт пока мы на спавне
+
+            // Камера игрока
             yawObject = new THREE.Group(); pitchObject = new THREE.Group();
             scene.add(yawObject); yawObject.add(pitchObject); pitchObject.add(camera);
-            yawObject.position.set(0, 2.5, 0);
+            yawObject.position.set(0, 5, 0);
 
             setupControls();
+            
+            // Кнопка /spawn
+            document.getElementById('cmd-spawn').onclick = () => {
+                currentWorld = 'spawn';
+                spawnGroup.visible = true; wildGroup.visible = false;
+                yawObject.position.set(0, 5, 0);
+                velocityY = 0;
+                pushMessage("<span style='color:#aaaaaa'>[Сервер] Вы телепортированы на спавн.</span>");
+            };
+
             animate();
         }
 
@@ -247,35 +297,21 @@
             const joyStick = document.getElementById('joystick-stick');
 
             zoneMove.addEventListener('touchstart', e => {
-                e.preventDefault();
-                let touch = e.changedTouches[0];
-                moveData.active = true; moveData.id = touch.identifier;
-                moveData.originX = touch.clientX; moveData.originY = touch.clientY;
-                moveData.x = 0; moveData.y = 0;
-                
-                joyBase.style.display = 'block';
-                joyBase.style.left = touch.clientX + 'px';
-                joyBase.style.top = touch.clientY + 'px';
+                e.preventDefault(); let t = e.changedTouches[0]; moveData.active = true; moveData.id = t.identifier;
+                moveData.originX = t.clientX; moveData.originY = t.clientY; moveData.x = 0; moveData.y = 0;
+                joyBase.style.display = 'block'; joyBase.style.left = t.clientX + 'px'; joyBase.style.top = t.clientY + 'px';
                 joyStick.style.transform = `translate(-50%, -50%)`;
             });
 
             zoneMove.addEventListener('touchmove', e => {
                 e.preventDefault();
                 for(let i=0; i<e.changedTouches.length; i++) {
-                    let touch = e.changedTouches[i];
-                    if(touch.identifier === moveData.id) {
-                        let dx = touch.clientX - moveData.originX;
-                        let dy = touch.clientY - moveData.originY;
-                        let distance = Math.sqrt(dx*dx + dy*dy);
-                        let maxDist = 40; 
-                        
-                        if(distance > maxDist) {
-                            dx = (dx / distance) * maxDist;
-                            dy = (dy / distance) * maxDist;
-                        }
-                        
-                        moveData.x = dx / maxDist; 
-                        moveData.y = dy / maxDist;
+                    let t = e.changedTouches[i];
+                    if(t.identifier === moveData.id) {
+                        let dx = t.clientX - moveData.originX; let dy = t.clientY - moveData.originY;
+                        let distance = Math.sqrt(dx*dx + dy*dy); let maxDist = 40; 
+                        if(distance > maxDist) { dx = (dx / distance) * maxDist; dy = (dy / distance) * maxDist; }
+                        moveData.x = dx / maxDist; moveData.y = dy / maxDist;
                         joyStick.style.transform = `translate(calc(-50% + ${dx}px), calc(-50% + ${dy}px))`;
                     }
                 }
@@ -289,18 +325,14 @@
                     }
                 }
             };
-            zoneMove.addEventListener('touchend', endMove);
-            zoneMove.addEventListener('touchcancel', endMove);
+            zoneMove.addEventListener('touchend', endMove); zoneMove.addEventListener('touchcancel', endMove);
 
             let isMouseDown = false;
-            
             const startLook = (x, y, id = 'mouse') => { lookData.active = true; lookData.id = id; lookData.lastX = x; lookData.lastY = y; };
             const moveLook = (x, y, id = 'mouse') => {
                 if(!lookData.active || lookData.id !== id) return;
-                let dx = x - lookData.lastX;
-                let dy = y - lookData.lastY;
-                yawObject.rotation.y -= dx * 0.005;
-                pitchObject.rotation.x -= dy * 0.005;
+                yawObject.rotation.y -= (x - lookData.lastX) * 0.005;
+                pitchObject.rotation.x -= (y - lookData.lastY) * 0.005;
                 pitchObject.rotation.x = Math.max(-Math.PI/2, Math.min(Math.PI/2, pitchObject.rotation.x));
                 lookData.lastX = x; lookData.lastY = y;
             };
@@ -315,9 +347,83 @@
             window.addEventListener('mouseup', () => { isMouseDown = false; endLook(); });
         }
 
+        function updatePhysicsAndTriggers() {
+            let groundLevel = -50; // Бездна по умолчанию
+            const px = yawObject.position.x;
+            const pz = yawObject.position.z;
+            
+            if (currentWorld === 'spawn') {
+                if (Math.abs(px) <= 20 && Math.abs(pz) <= 20) {
+                    groundLevel = 0.5; // На спавне
+                } else if (Math.abs(px) <= 50 && Math.abs(pz) <= 50) {
+                    groundLevel = -9.5; // На Арене СС
+                }
+            } else if (currentWorld === 'wild') {
+                groundLevel = 0; // В диком мире
+            }
+
+            yawObject.position.y += velocityY;
+            const playerHeight = 1.5;
+
+            // Коллизия с полом
+            if (yawObject.position.y - playerHeight <= groundLevel) {
+                yawObject.position.y = groundLevel + playerHeight;
+                velocityY = 0;
+            } else {
+                velocityY -= 0.02; // Гравитация (свободное падение)
+            }
+
+            // Упал в бездну
+            if (yawObject.position.y < -30) {
+                yawObject.position.set(0, 5, 0);
+                velocityY = 0; currentWorld = 'spawn';
+                spawnGroup.visible = true; wildGroup.visible = false;
+                pushMessage("<span style='color:#ff5555'>Вы разбились.</span>");
+            }
+
+            // ТРИГГЕР: АВТОШАХТА
+            if (currentWorld === 'spawn' && Math.abs(px - (-12)) < 3 && Math.abs(pz - 0) < 3) {
+                if (Date.now() - lastMineTime > 1000) {
+                    playerBalance += 10;
+                    document.getElementById('balance-ui').innerText = '💰 ' + playerBalance + ' ⛃';
+                    lastMineTime = Date.now();
+                }
+            }
+
+            // ТРИГГЕР: РТП
+            if (currentWorld === 'spawn' && Math.abs(px - 0) < 2 && Math.abs(pz - (-15)) < 2) {
+                if (Date.now() - lastRtpTime > 5000) {
+                    currentWorld = 'wild';
+                    spawnGroup.visible = false; wildGroup.visible = true;
+                    // Кидаем в рандомную точку на карте 2000х2000
+                    yawObject.position.set(Math.floor(Math.random()*2000 - 1000), 50, Math.floor(Math.random()*2000 - 1000));
+                    pushMessage("<span style='color:#00ffff'>[РТП] Телепортация: X: " + Math.floor(yawObject.position.x) + " Z: " + Math.floor(yawObject.position.z) + "</span>");
+                    lastRtpTime = Date.now();
+                }
+            }
+        }
+
+        function updateHolograms() {
+            const tempV = new THREE.Vector3();
+            holograms.forEach(holo => {
+                if (holo.world !== currentWorld) { holo.element.style.display = 'none'; return; }
+                
+                tempV.copy(holo.position);
+                tempV.project(camera);
+                
+                // Если за спиной
+                if (tempV.z > 1 || tempV.z < -1) { holo.element.style.display = 'none'; return; }
+                
+                holo.element.style.display = 'block';
+                const x = (tempV.x * 0.5 + 0.5) * window.innerWidth;
+                const y = (tempV.y * -0.5 + 0.5) * window.innerHeight;
+                holo.element.style.transform = `translate(-50%, -50%) translate(${x}px, ${y}px)`;
+            });
+        }
+
         function animate() {
             requestAnimationFrame(animate);
-            const speed = 0.15;
+            const speed = 0.2;
             
             if (keys.w) yawObject.translateZ(-speed);
             if (keys.s) yawObject.translateZ(speed);
@@ -329,33 +435,13 @@
                 yawObject.translateZ(moveData.y * speed);
             }
 
+            updatePhysicsAndTriggers();
+            updateHolograms();
             renderer.render(scene, camera);
         }
 
         // --- 4. ДИНАМИЧЕСКИЙ ЧАТ ---
         const chatContainer = document.getElementById('chat-container');
-        const items = ["шалкера", "сферу", "крушак", "кирку на эфф 5", "геплы", "талик"];
-        const prices = ["1кк", "500к", "2кк", "дешево", "дорого"];
-
-        function generateMessage(bot) {
-            let randomTarget = activeBots[Math.floor(Math.random() * activeBots.length)].name;
-
-            if (bot.stats.pvp >= 1 && Math.random() > 0.5) {
-                const toxic = [ `ezzzzz в ноги`, `${randomTarget} нуль ливай`, `кто 1х1 на спавн?`, `${randomTarget} софтер оффни киллауру`, `мать в канаве ${randomTarget}` ];
-                return toxic[Math.floor(Math.random() * toxic.length)];
-            } 
-            
-            if (bot.stats.wealth >= 1 && Math.random() > 0.5) {
-                const item = items[Math.floor(Math.random() * items.length)];
-                const price = prices[Math.floor(Math.random() * prices.length)];
-                const trade = [ `! продам ${item} за ${price}`, `куплю ${item} в лс`, `чекайте аук сливаю ресы`, `кто даст ${item} за монеты?` ];
-                return trade[Math.floor(Math.random() * trade.length)];
-            }
-
-            const noob = [ `кто приютит я без ресов`, `дайте ресов пж`, `как тут приватить?`, `тп на спавн плиз`, `где мистик?` ];
-            return noob[Math.floor(Math.random() * noob.length)];
-        }
-
         function pushMessage(htmlText) {
             const msg = document.createElement('div');
             msg.className = 'chat-message'; msg.innerHTML = htmlText;
@@ -368,13 +454,26 @@
             
             setInterval(() => {
                 const bot = window.activeBots[Math.floor(Math.random() * window.activeBots.length)];
-                const msg = generateMessage(bot);
+                let msg = "";
+                let randomTarget = window.activeBots[Math.floor(Math.random() * window.activeBots.length)].name;
+
+                if (bot.stats.pvp >= 1 && Math.random() > 0.5) {
+                    const toxic = [ `ezzzzz`, `${randomTarget} нуль ливай`, `кто 1х1 на арену сс?`, `${randomTarget} софтер оффни` ];
+                    msg = toxic[Math.floor(Math.random() * toxic.length)];
+                } else if (bot.stats.wealth >= 1 && Math.random() > 0.5) {
+                    const trade = [ `! продам крушак за 2кк`, `чекайте /ah сливаю ресы`, `кто даст шалкер за монеты?` ];
+                    msg = trade[Math.floor(Math.random() * trade.length)];
+                } else {
+                    const noob = [ `кто приютит я без ресов`, `как тут приватить?`, `где мистик?` ];
+                    msg = noob[Math.floor(Math.random() * noob.length)];
+                }
+
                 const prefix = bot.rank.name === "Игрок" ? "" : `[${bot.rank.name}] `;
                 pushMessage(`<span class="${bot.rank.class}">${prefix}</span><span class="chat-name">${bot.name} ➯</span> ${msg}`);
             }, 3000);
 
             setInterval(() => {
-                pushMessage("<span style='color:#ff5555'>⚜ Мистический сундук упал на X: " + (Math.floor(Math.random() * 2000) - 1000) + ", Z: " + (Math.floor(Math.random() * 2000) - 1000) + "</span>");
+                pushMessage("<span style='color:#ff5555'>⚜ Мистический сундук упал на X: " + (Math.floor(Math.random()*2000)-1000) + " Z: " + (Math.floor(Math.random()*2000)-1000) + "</span>");
             }, 25000);
         }
     </script>
