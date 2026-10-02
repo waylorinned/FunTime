@@ -1,0 +1,384 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>FT Anarchy Simulator</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=VT323&display=swap');
+
+        * { box-sizing: border-box; margin: 0; padding: 0; user-select: none; }
+        body { font-family: 'VT323', monospace; background-color: #1a1a1a; color: #fff; overflow: hidden; }
+
+        /* --- МЕНЮ --- */
+        #menu-ui {
+            position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+            background: url('https://minecraft.wiki/images/Dirt_JE4_BE3.png') repeat;
+            background-size: 64px 64px; display: flex; flex-direction: column;
+            align-items: center; padding: 20px; z-index: 10;
+        }
+        .menu-header { text-align: center; background: rgba(0, 0, 0, 0.7); padding: 10px 20px; border: 4px solid #555; margin-bottom: 20px; width: 90%; max-width: 600px; }
+        .menu-header h1 { font-size: 36px; color: #ffaa00; text-shadow: 2px 2px 0 #000; }
+        .menu-header p { font-size: 20px; color: #aaa; }
+        .server-list { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 10px; width: 100%; max-width: 1200px; overflow-y: auto; padding-bottom: 50px; touch-action: pan-y; }
+        .server-card { background: rgba(0, 0, 0, 0.8); border: 2px solid #333; padding: 15px; cursor: pointer; display: flex; flex-direction: column; }
+        .server-top-row { display: flex; justify-content: space-between; align-items: center; }
+        .server-name { font-size: 24px; font-weight: bold; }
+        .pin-btn { font-size: 28px; color: #555; cursor: pointer; transition: 0.2s; }
+        .pin-btn.pinned { color: #ffd700; text-shadow: 0 0 10px #ffaa00; }
+        .server-online { color: #55ff55; font-size: 18px; margin-top: 5px; }
+
+        #queue-modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0, 0, 0, 0.85); z-index: 20; justify-content: center; align-items: center; }
+        .modal-content { background: #222; border: 4px solid #555; padding: 20px; text-align: center; }
+        .modal-content h2 { color: #ff5555; font-size: 28px; margin-bottom: 10px; }
+        .cancel-btn { background: #444; border: 2px solid #000; color: #fff; padding: 10px 20px; font-family: inherit; font-size: 18px; cursor: pointer; }
+
+        /* --- ИГРА --- */
+        #game-ui { display: none; position: absolute; top: 0; left: 0; width: 100%; height: 100%; z-index: 5; touch-action: none; pointer-events: none; }
+        
+        #crosshair { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); color: rgba(255,255,255,0.7); font-size: 24px; font-family: sans-serif; }
+        #balance-ui { position: absolute; top: 10px; right: 10px; background: rgba(0,0,0,0.5); padding: 5px 10px; font-size: 22px; color: #ffd700; border: 2px solid #333; }
+        #stats-ui { position: absolute; bottom: 65px; left: 50%; transform: translateX(-50%); display: flex; justify-content: space-between; width: 320px; font-size: 16px; }
+        #hotbar { position: absolute; bottom: 10px; left: 50%; transform: translateX(-50%); display: flex; gap: 2px; background: rgba(0,0,0,0.6); border: 3px solid #333; padding: 2px; }
+        .slot { width: 34px; height: 34px; background: rgba(255,255,255,0.1); border: 2px solid #555; }
+        .slot.active { border: 2px solid #fff; }
+
+        #chat-container { position: absolute; top: 10px; left: 10px; width: 70%; max-width: 300px; height: 180px; background: rgba(0, 0, 0, 0.4); padding: 5px; overflow-y: hidden; display: flex; flex-direction: column; justify-content: flex-end; }
+        .chat-message { font-size: 16px; line-height: 1.1; margin-bottom: 4px; text-shadow: 1px 1px 0 #000; word-wrap: break-word; }
+        .chat-rank-hero { color: #ff55ff; } .chat-rank-holy { color: #ffff55; } .chat-name { color: #ffffff; }
+
+        /* Зоны управления (Сенсор) */
+        #touch-zones { position: absolute; top: 0; left: 0; width: 100%; height: 100%; display: flex; z-index: 10; pointer-events: auto; }
+        .joystick-area { width: 50%; height: 100%; position: relative; }
+        
+        /* Визуальный джойстик */
+        #joystick-base { display: none; position: absolute; width: 100px; height: 100px; background: rgba(255,255,255,0.1); border: 2px solid rgba(255,255,255,0.3); border-radius: 50%; transform: translate(-50%, -50%); pointer-events: none; }
+        #joystick-stick { position: absolute; top: 50%; left: 50%; width: 40px; height: 40px; background: rgba(255,255,255,0.5); border-radius: 50%; transform: translate(-50%, -50%); pointer-events: none; }
+    </style>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+</head>
+<body>
+
+    <div id="menu-ui">
+        <div class="menu-header">
+            <h1>FunTime Network</h1>
+            <p>Общий онлайн: <span id="total-online">0</span></p>
+        </div>
+        <div class="server-list" id="server-list"></div>
+    </div>
+
+    <div id="queue-modal">
+        <div class="modal-content">
+            <h2>Очередь на сервер</h2>
+            <p>Ваша позиция: <span id="queue-pos">142</span></p><br>
+            <button class="cancel-btn" onclick="closeQueue()">Отмена</button>
+        </div>
+    </div>
+
+    <div id="game-ui">
+        <!-- Зоны для сенсора -->
+        <div id="touch-zones">
+            <div class="joystick-area" id="zone-move">
+                <div id="joystick-base"><div id="joystick-stick"></div></div>
+            </div>
+            <div class="joystick-area" id="zone-look"></div>
+        </div>
+
+        <div id="crosshair">十</div>
+        <div id="balance-ui">💰 1 500 ⛃</div>
+        <div id="chat-container"></div>
+        
+        <div id="stats-ui">
+            <div id="health-bar">❤️❤️❤️❤️❤️❤️❤️❤️❤️❤️</div>
+            <div id="food-bar">🍗🍗🍗🍗🍗🍗🍗🍗🍗🍗</div>
+        </div>
+        <div id="hotbar">
+            <div class="slot active"></div><div class="slot"></div><div class="slot"></div>
+            <div class="slot"></div><div class="slot"></div><div class="slot"></div>
+            <div class="slot"></div><div class="slot"></div><div class="slot"></div>
+        </div>
+    </div>
+
+    <script>
+        // --- 1. ГЕНЕРАЦИЯ БОТОВ (ДИНАМИЧЕСКАЯ) ---
+        const BOTS_COUNT = 200;
+        window.activeBots = [];
+
+        const prefixes = ["zxc_", "PvP_", "Pro_", "lil_", "xX_", "", "", ""];
+        const roots = ["Killer", "Bebra", "Dimon", "Kroshka", "Nagibator", "Toster", "Voin", "Ded", "Griefer", "Sigma", "Ponpon"];
+        const suffixes = ["_228", "1337", "2010", "_god", "Ez", "Pro", "", "", ""];
+        const ranks = [{ name: "Игрок", class: "" }, { name: "Hero", class: "chat-rank-hero" }, { name: "Holy", class: "chat-rank-holy" }];
+
+        function generateName() {
+            let p = prefixes[Math.floor(Math.random() * prefixes.length)];
+            let r = roots[Math.floor(Math.random() * roots.length)];
+            let s = suffixes[Math.floor(Math.random() * suffixes.length)];
+            return p + r + s + (Math.random() > 0.5 ? Math.floor(Math.random()*99) : "");
+        }
+
+        function generateBotPersonality(index) {
+            const combatSkill = Math.floor(Math.random() * 3); // 0-слабый, 1-средний, 2-сильный
+            const wealth = Math.floor(Math.random() * 3);
+            const morality = Math.floor(Math.random() * 3);
+            
+            return {
+                id: index,
+                name: generateName(),
+                rank: ranks[Math.random() > 0.7 ? Math.floor(Math.random() * ranks.length) : 0], // 70% обычные игроки
+                stats: { pvp: combatSkill, wealth: wealth, cheater: (morality === 0) ? 2 : 0 }
+            };
+        }
+
+        function initBots() {
+            for(let i = 0; i < BOTS_COUNT; i++) activeBots.push(generateBotPersonality(i));
+        }
+
+        // --- 2. ЛОГИКА МЕНЮ ---
+        const totalServers = 250;
+        const playableServer = 216;
+        const serverList = document.getElementById('server-list');
+        const queueModal = document.getElementById('queue-modal');
+        let queueInterval;
+        let totalOnlineCounter = 0;
+
+        for (let i = 1; i <= totalServers; i++) {
+            const card = document.createElement('div');
+            card.className = 'server-card';
+            card.dataset.id = i;
+            let online = (i === playableServer) ? BOTS_COUNT : Math.floor(Math.random() * 100) + 100;
+            totalOnlineCounter += online;
+
+            card.innerHTML = `<div class="server-top-row"><div class="server-name">Анархия-${i}</div><div class="pin-btn">★</div></div><div class="server-online">Онлайн: ${online} / 250</div>`;
+            
+            card.querySelector('.pin-btn').onclick = (e) => {
+                e.stopPropagation(); e.target.classList.toggle('pinned'); sortServers();
+            };
+            card.onclick = () => connectToServer(i);
+            serverList.appendChild(card);
+        }
+        document.getElementById('total-online').innerText = totalOnlineCounter;
+
+        function sortServers() {
+            const cards = Array.from(serverList.children);
+            cards.sort((a, b) => {
+                const aP = a.querySelector('.pin-btn').classList.contains('pinned');
+                const bP = b.querySelector('.pin-btn').classList.contains('pinned');
+                if (aP && !bP) return -1; if (!aP && bP) return 1;  
+                return parseInt(a.dataset.id) - parseInt(b.dataset.id);
+            });
+            cards.forEach(c => serverList.appendChild(c));
+        }
+
+        function connectToServer(id) {
+            if (id === playableServer) {
+                document.getElementById('menu-ui').style.display = 'none';
+                document.getElementById('game-ui').style.display = 'block';
+                initBots(); initThreeJS(); startChat();
+            } else {
+                queueModal.style.display = 'flex';
+                let pos = Math.floor(Math.random() * 50) + 50; document.getElementById('queue-pos').innerText = pos;
+                queueInterval = setInterval(() => { if (Math.random() > 0.8) pos--; document.getElementById('queue-pos').innerText = pos; }, 3000);
+            }
+        }
+        function closeQueue() { queueModal.style.display = 'none'; clearInterval(queueInterval); }
+
+        // --- 3. 3D И СЕНСОРНОЕ УПРАВЛЕНИЕ (DUAL STICK) ---
+        let scene, camera, renderer, yawObject, pitchObject;
+        
+        // Переменные джойстика
+        let moveData = { active: false, id: null, originX: 0, originY: 0, x: 0, y: 0 };
+        let lookData = { active: false, id: null, lastX: 0, lastY: 0 };
+        const keys = { w: false, a: false, s: false, d: false }; // Оставил для ПК
+
+        function initThreeJS() {
+            scene = new THREE.Scene(); scene.background = new THREE.Color(0x87CEEB); scene.fog = new THREE.Fog(0x87CEEB, 5, 40);
+            camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
+            renderer = new THREE.WebGLRenderer({ antialias: false });
+            renderer.setSize(window.innerWidth, window.innerHeight);
+            
+            renderer.domElement.style.position = 'absolute'; renderer.domElement.style.top = '0'; renderer.domElement.style.zIndex = '-1';
+            document.getElementById('game-ui').appendChild(renderer.domElement);
+
+            const light = new THREE.HemisphereLight(0xffffff, 0x444444); light.position.set(0, 200, 0); scene.add(light);
+            const floor = new THREE.Mesh(new THREE.PlaneGeometry(100, 100), new THREE.MeshLambertMaterial({ color: 0x555555 }));
+            floor.rotation.x = -Math.PI / 2; scene.add(floor);
+            const spawnPlatform = new THREE.Mesh(new THREE.BoxGeometry(10, 1, 10), new THREE.MeshLambertMaterial({ color: 0x888888 }));
+            spawnPlatform.position.y = 0.5; scene.add(spawnPlatform);
+            const chest = new THREE.Mesh(new THREE.BoxGeometry(1, 1, 1), new THREE.MeshLambertMaterial({ color: 0x8B4513 }));
+            chest.position.set(0, 1.5, -4); scene.add(chest);
+
+            yawObject = new THREE.Group(); pitchObject = new THREE.Group();
+            scene.add(yawObject); yawObject.add(pitchObject); pitchObject.add(camera);
+            yawObject.position.set(0, 2.5, 0);
+
+            setupControls();
+            animate();
+        }
+
+        function setupControls() {
+            // Клавиатура (ПК)
+            window.addEventListener('keydown', e => { if(keys.hasOwnProperty(e.key.toLowerCase())) keys[e.key.toLowerCase()] = true; });
+            window.addEventListener('keyup', e => { if(keys.hasOwnProperty(e.key.toLowerCase())) keys[e.key.toLowerCase()] = false; });
+
+            // Сенсорные зоны
+            const zoneMove = document.getElementById('zone-move');
+            const zoneLook = document.getElementById('zone-look');
+            const joyBase = document.getElementById('joystick-base');
+            const joyStick = document.getElementById('joystick-stick');
+
+            // Зона перемещения (Левая)
+            zoneMove.addEventListener('touchstart', e => {
+                e.preventDefault();
+                let touch = e.changedTouches[0];
+                moveData.active = true; moveData.id = touch.identifier;
+                moveData.originX = touch.clientX; moveData.originY = touch.clientY;
+                moveData.x = 0; moveData.y = 0;
+                
+                joyBase.style.display = 'block';
+                joyBase.style.left = touch.clientX + 'px';
+                joyBase.style.top = touch.clientY + 'px';
+                joyStick.style.transform = `translate(-50%, -50%)`;
+            });
+
+            zoneMove.addEventListener('touchmove', e => {
+                e.preventDefault();
+                for(let i=0; i<e.changedTouches.length; i++) {
+                    let touch = e.changedTouches[i];
+                    if(touch.identifier === moveData.id) {
+                        let dx = touch.clientX - moveData.originX;
+                        let dy = touch.clientY - moveData.originY;
+                        let distance = Math.sqrt(dx*dx + dy*dy);
+                        let maxDist = 40; // Радиус джойстика
+                        
+                        if(distance > maxDist) {
+                            dx = (dx / distance) * maxDist;
+                            dy = (dy / distance) * maxDist;
+                        }
+                        
+                        moveData.x = dx / maxDist; // от -1 до 1
+                        moveData.y = dy / maxDist;
+                        joyStick.style.transform = `translate(calc(-50% + ${dx}px), calc(-50% + ${dy}px))`;
+                    }
+                }
+            });
+
+            const endMove = (e) => {
+                for(let i=0; i<e.changedTouches.length; i++) {
+                    if(e.changedTouches[i].identifier === moveData.id) {
+                        moveData.active = false; moveData.id = null; moveData.x = 0; moveData.y = 0;
+                        joyBase.style.display = 'none';
+                    }
+                }
+            };
+            zoneMove.addEventListener('touchend', endMove);
+            zoneMove.addEventListener('touchcancel', endMove);
+
+            // Зона обзора (Правая) - Мышь для ПК тоже добавим
+            let isMouseDown = false;
+            
+            const startLook = (x, y, id = 'mouse') => {
+                lookData.active = true; lookData.id = id; lookData.lastX = x; lookData.lastY = y;
+            };
+            const moveLook = (x, y, id = 'mouse') => {
+                if(!lookData.active || lookData.id !== id) return;
+                let dx = x - lookData.lastX;
+                let dy = y - lookData.lastY;
+                yawObject.rotation.y -= dx * 0.005;
+                pitchObject.rotation.x -= dy * 0.005;
+                pitchObject.rotation.x = Math.max(-Math.PI/2, Math.min(Math.PI/2, pitchObject.rotation.x));
+                lookData.lastX = x; lookData.lastY = y;
+            };
+            const endLook = (id = 'mouse') => { if(lookData.id === id) lookData.active = false; };
+
+            zoneLook.addEventListener('touchstart', e => { e.preventDefault(); let t = e.changedTouches[0]; startLook(t.clientX, t.clientY, t.identifier); });
+            zoneLook.addEventListener('touchmove', e => { e.preventDefault(); for(let i=0; i<e.changedTouches.length; i++) { let t = e.changedTouches[i]; moveLook(t.clientX, t.clientY, t.identifier); }});
+            zoneLook.addEventListener('touchend', e => { for(let i=0; i<e.changedTouches.length; i++) endLook(e.changedTouches[i].identifier); });
+            
+            // Для ПК-тестов
+            zoneLook.addEventListener('mousedown', e => { isMouseDown = true; startLook(e.clientX, e.clientY); });
+            window.addEventListener('mousemove', e => { if(isMouseDown) moveLook(e.clientX, e.clientY); });
+            window.addEventListener('mouseup', () => { isMouseDown = false; endLook(); });
+        }
+
+        function animate() {
+            requestAnimationFrame(animate);
+            const speed = 0.15;
+            
+            // Управление с клавиатуры
+            if (keys.w) yawObject.translateZ(-speed);
+            if (keys.s) yawObject.translateZ(speed);
+            if (keys.a) yawObject.translateX(-speed);
+            if (keys.d) yawObject.translateX(speed);
+
+            // Управление с джойстика (если активен)
+            if (moveData.active) {
+                yawObject.translateX(moveData.x * speed);
+                yawObject.translateZ(moveData.y * speed);
+            }
+
+            renderer.render(scene, camera);
+        }
+
+        // --- 4. ДИНАМИЧЕСКИЙ ЧАТ ---
+        const chatContainer = document.getElementById('chat-container');
+
+        const items = ["шалкера", "сферу", "крушак", "кирку на эфф 5", "геплы", "талик"];
+        const prices = ["1кк", "500к", "2кк", "дешево", "дорого"];
+
+        function generateMessage(bot) {
+            // Выбираем случайного другого игрока как жертву/собеседника
+            let randomTarget = activeBots[Math.floor(Math.random() * activeBots.length)].name;
+
+            // Логика зависит от статов бота
+            if (bot.stats.pvp >= 1 && Math.random() > 0.5) {
+                // Токсичный ПвПшер
+                const toxic = [
+                    `ezzzzz в ноги`, `${randomTarget} нуль ливай`,
+                    `кто 1х1 на спавн?`, `${randomTarget} софтер оффни киллауру`, `мать в канаве ${randomTarget}`
+                ];
+                return toxic[Math.floor(Math.random() * toxic.length)];
+            } 
+            
+            if (bot.stats.wealth >= 1 && Math.random() > 0.5) {
+                // Барыга
+                const item = items[Math.floor(Math.random() * items.length)];
+                const price = prices[Math.floor(Math.random() * prices.length)];
+                const trade = [
+                    `! продам ${item} за ${price}`, `куплю ${item} в лс`,
+                    `чекайте аук сливаю ресы`, `кто даст ${item} за монеты?`
+                ];
+                return trade[Math.floor(Math.random() * trade.length)];
+            }
+
+            // Новичок / Бомж
+            const noob = [
+                `кто приютит я без ресов`, `дайте ресов пж`, `как тут приватить?`,
+                `тп на спавн плиз`, `где мистик?`
+            ];
+            return noob[Math.floor(Math.random() * noob.length)];
+        }
+
+        function pushMessage(htmlText) {
+            const msg = document.createElement('div');
+            msg.className = 'chat-message'; msg.innerHTML = htmlText;
+            chatContainer.appendChild(msg);
+            if (chatContainer.children.length > 8) chatContainer.removeChild(chatContainer.firstChild);
+        }
+
+        function startChat() {
+            pushMessage("<span style='color:#ff5555'>[Система] Загружено 200 ИИ-игроков.</span>");
+            
+            setInterval(() => {
+                const bot = window.activeBots[Math.floor(Math.random() * window.activeBots.length)];
+                const msg = generateMessage(bot);
+                const prefix = bot.rank.name === "Игрок" ? "" : `[${bot.rank.name}] `;
+                pushMessage(`<span class="${bot.rank.class}">${prefix}</span><span class="chat-name">${bot.name} ➯</span> ${msg}`);
+            }, 3000);
+
+            setInterval(() => {
+                pushMessage("<span style='color:#ff5555'>⚜ Мистический сундук упал на X: " + (Math.floor(Math.random() * 2000) - 1000) + ", Z: " + (Math.floor(Math.random() * 2000) - 1000) + "</span>");
+            }, 25000);
+        }
+    </script>
+</body>
+</html>
