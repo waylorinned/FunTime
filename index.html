@@ -24,8 +24,10 @@
         .server-card { background: rgba(0, 0, 0, 0.8); border: 2px solid #333; padding: 15px; cursor: pointer; display: flex; flex-direction: column; }
         .server-top-row { display: flex; justify-content: space-between; align-items: center; }
         .server-name { font-size: 24px; font-weight: bold; }
+        
         .pin-btn { font-size: 28px; color: #555; cursor: pointer; transition: 0.2s; }
         .pin-btn.pinned { color: #ffd700; text-shadow: 0 0 10px #ffaa00; }
+        
         .server-online { color: #55ff55; font-size: 18px; margin-top: 5px; }
 
         #queue-modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0, 0, 0, 0.85); z-index: 20; justify-content: center; align-items: center; }
@@ -51,7 +53,6 @@
         #touch-zones { position: absolute; top: 0; left: 0; width: 100%; height: 100%; display: flex; z-index: 10; pointer-events: auto; }
         .joystick-area { width: 50%; height: 100%; position: relative; }
         
-        /* Визуальный джойстик */
         #joystick-base { display: none; position: absolute; width: 100px; height: 100px; background: rgba(255,255,255,0.1); border: 2px solid rgba(255,255,255,0.3); border-radius: 50%; transform: translate(-50%, -50%); pointer-events: none; }
         #joystick-stick { position: absolute; top: 50%; left: 50%; width: 40px; height: 40px; background: rgba(255,255,255,0.5); border-radius: 50%; transform: translate(-50%, -50%); pointer-events: none; }
     </style>
@@ -76,18 +77,13 @@
     </div>
 
     <div id="game-ui">
-        <!-- Зоны для сенсора -->
         <div id="touch-zones">
-            <div class="joystick-area" id="zone-move">
-                <div id="joystick-base"><div id="joystick-stick"></div></div>
-            </div>
+            <div class="joystick-area" id="zone-move"><div id="joystick-base"><div id="joystick-stick"></div></div></div>
             <div class="joystick-area" id="zone-look"></div>
         </div>
-
         <div id="crosshair">十</div>
         <div id="balance-ui">💰 1 500 ⛃</div>
         <div id="chat-container"></div>
-        
         <div id="stats-ui">
             <div id="health-bar">❤️❤️❤️❤️❤️❤️❤️❤️❤️❤️</div>
             <div id="food-bar">🍗🍗🍗🍗🍗🍗🍗🍗🍗🍗</div>
@@ -117,14 +113,14 @@
         }
 
         function generateBotPersonality(index) {
-            const combatSkill = Math.floor(Math.random() * 3); // 0-слабый, 1-средний, 2-сильный
+            const combatSkill = Math.floor(Math.random() * 3); 
             const wealth = Math.floor(Math.random() * 3);
             const morality = Math.floor(Math.random() * 3);
             
             return {
                 id: index,
                 name: generateName(),
-                rank: ranks[Math.random() > 0.7 ? Math.floor(Math.random() * ranks.length) : 0], // 70% обычные игроки
+                rank: ranks[Math.random() > 0.7 ? Math.floor(Math.random() * ranks.length) : 0],
                 stats: { pvp: combatSkill, wealth: wealth, cheater: (morality === 0) ? 2 : 0 }
             };
         }
@@ -133,13 +129,16 @@
             for(let i = 0; i < BOTS_COUNT; i++) activeBots.push(generateBotPersonality(i));
         }
 
-        // --- 2. ЛОГИКА МЕНЮ ---
+        // --- 2. ЛОГИКА МЕНЮ (С ИСПОЛЬЗОВАНИЕМ LOCALSTORAGE) ---
         const totalServers = 250;
         const playableServer = 216;
         const serverList = document.getElementById('server-list');
         const queueModal = document.getElementById('queue-modal');
         let queueInterval;
         let totalOnlineCounter = 0;
+
+        // Загружаем сохраненные сервера из памяти браузера
+        let pinnedServers = JSON.parse(localStorage.getItem('ft_pinned_servers') || '[]');
 
         for (let i = 1; i <= totalServers; i++) {
             const card = document.createElement('div');
@@ -148,15 +147,40 @@
             let online = (i === playableServer) ? BOTS_COUNT : Math.floor(Math.random() * 100) + 100;
             totalOnlineCounter += online;
 
-            card.innerHTML = `<div class="server-top-row"><div class="server-name">Анархия-${i}</div><div class="pin-btn">★</div></div><div class="server-online">Онлайн: ${online} / 250</div>`;
+            const isPinned = pinnedServers.includes(i);
+            const pinnedClass = isPinned ? 'pinned' : '';
+
+            card.innerHTML = `
+                <div class="server-top-row">
+                    <div class="server-name">Анархия-${i}</div>
+                    <div class="pin-btn ${pinnedClass}">★</div>
+                </div>
+                <div class="server-online">Онлайн: ${online} / 250</div>
+            `;
             
             card.querySelector('.pin-btn').onclick = (e) => {
-                e.stopPropagation(); e.target.classList.toggle('pinned'); sortServers();
+                e.stopPropagation(); 
+                const btn = e.target;
+                const currentlyPinned = btn.classList.toggle('pinned');
+                
+                if (currentlyPinned) {
+                    if (!pinnedServers.includes(i)) pinnedServers.push(i);
+                } else {
+                    pinnedServers = pinnedServers.filter(id => id !== i);
+                }
+                
+                // Сохраняем в память
+                localStorage.setItem('ft_pinned_servers', JSON.stringify(pinnedServers));
+                sortServers();
             };
+            
             card.onclick = () => connectToServer(i);
             serverList.appendChild(card);
         }
         document.getElementById('total-online').innerText = totalOnlineCounter;
+
+        // Сортируем один раз при загрузке, чтобы закрепленные сразу были сверху
+        sortServers();
 
         function sortServers() {
             const cards = Array.from(serverList.children);
@@ -182,13 +206,11 @@
         }
         function closeQueue() { queueModal.style.display = 'none'; clearInterval(queueInterval); }
 
-        // --- 3. 3D И СЕНСОРНОЕ УПРАВЛЕНИЕ (DUAL STICK) ---
+        // --- 3. 3D И СЕНСОРНОЕ УПРАВЛЕНИЕ ---
         let scene, camera, renderer, yawObject, pitchObject;
-        
-        // Переменные джойстика
         let moveData = { active: false, id: null, originX: 0, originY: 0, x: 0, y: 0 };
         let lookData = { active: false, id: null, lastX: 0, lastY: 0 };
-        const keys = { w: false, a: false, s: false, d: false }; // Оставил для ПК
+        const keys = { w: false, a: false, s: false, d: false }; 
 
         function initThreeJS() {
             scene = new THREE.Scene(); scene.background = new THREE.Color(0x87CEEB); scene.fog = new THREE.Fog(0x87CEEB, 5, 40);
@@ -216,17 +238,14 @@
         }
 
         function setupControls() {
-            // Клавиатура (ПК)
             window.addEventListener('keydown', e => { if(keys.hasOwnProperty(e.key.toLowerCase())) keys[e.key.toLowerCase()] = true; });
             window.addEventListener('keyup', e => { if(keys.hasOwnProperty(e.key.toLowerCase())) keys[e.key.toLowerCase()] = false; });
 
-            // Сенсорные зоны
             const zoneMove = document.getElementById('zone-move');
             const zoneLook = document.getElementById('zone-look');
             const joyBase = document.getElementById('joystick-base');
             const joyStick = document.getElementById('joystick-stick');
 
-            // Зона перемещения (Левая)
             zoneMove.addEventListener('touchstart', e => {
                 e.preventDefault();
                 let touch = e.changedTouches[0];
@@ -248,14 +267,14 @@
                         let dx = touch.clientX - moveData.originX;
                         let dy = touch.clientY - moveData.originY;
                         let distance = Math.sqrt(dx*dx + dy*dy);
-                        let maxDist = 40; // Радиус джойстика
+                        let maxDist = 40; 
                         
                         if(distance > maxDist) {
                             dx = (dx / distance) * maxDist;
                             dy = (dy / distance) * maxDist;
                         }
                         
-                        moveData.x = dx / maxDist; // от -1 до 1
+                        moveData.x = dx / maxDist; 
                         moveData.y = dy / maxDist;
                         joyStick.style.transform = `translate(calc(-50% + ${dx}px), calc(-50% + ${dy}px))`;
                     }
@@ -273,12 +292,9 @@
             zoneMove.addEventListener('touchend', endMove);
             zoneMove.addEventListener('touchcancel', endMove);
 
-            // Зона обзора (Правая) - Мышь для ПК тоже добавим
             let isMouseDown = false;
             
-            const startLook = (x, y, id = 'mouse') => {
-                lookData.active = true; lookData.id = id; lookData.lastX = x; lookData.lastY = y;
-            };
+            const startLook = (x, y, id = 'mouse') => { lookData.active = true; lookData.id = id; lookData.lastX = x; lookData.lastY = y; };
             const moveLook = (x, y, id = 'mouse') => {
                 if(!lookData.active || lookData.id !== id) return;
                 let dx = x - lookData.lastX;
@@ -294,7 +310,6 @@
             zoneLook.addEventListener('touchmove', e => { e.preventDefault(); for(let i=0; i<e.changedTouches.length; i++) { let t = e.changedTouches[i]; moveLook(t.clientX, t.clientY, t.identifier); }});
             zoneLook.addEventListener('touchend', e => { for(let i=0; i<e.changedTouches.length; i++) endLook(e.changedTouches[i].identifier); });
             
-            // Для ПК-тестов
             zoneLook.addEventListener('mousedown', e => { isMouseDown = true; startLook(e.clientX, e.clientY); });
             window.addEventListener('mousemove', e => { if(isMouseDown) moveLook(e.clientX, e.clientY); });
             window.addEventListener('mouseup', () => { isMouseDown = false; endLook(); });
@@ -304,13 +319,11 @@
             requestAnimationFrame(animate);
             const speed = 0.15;
             
-            // Управление с клавиатуры
             if (keys.w) yawObject.translateZ(-speed);
             if (keys.s) yawObject.translateZ(speed);
             if (keys.a) yawObject.translateX(-speed);
             if (keys.d) yawObject.translateX(speed);
 
-            // Управление с джойстика (если активен)
             if (moveData.active) {
                 yawObject.translateX(moveData.x * speed);
                 yawObject.translateZ(moveData.y * speed);
@@ -321,40 +334,25 @@
 
         // --- 4. ДИНАМИЧЕСКИЙ ЧАТ ---
         const chatContainer = document.getElementById('chat-container');
-
         const items = ["шалкера", "сферу", "крушак", "кирку на эфф 5", "геплы", "талик"];
         const prices = ["1кк", "500к", "2кк", "дешево", "дорого"];
 
         function generateMessage(bot) {
-            // Выбираем случайного другого игрока как жертву/собеседника
             let randomTarget = activeBots[Math.floor(Math.random() * activeBots.length)].name;
 
-            // Логика зависит от статов бота
             if (bot.stats.pvp >= 1 && Math.random() > 0.5) {
-                // Токсичный ПвПшер
-                const toxic = [
-                    `ezzzzz в ноги`, `${randomTarget} нуль ливай`,
-                    `кто 1х1 на спавн?`, `${randomTarget} софтер оффни киллауру`, `мать в канаве ${randomTarget}`
-                ];
+                const toxic = [ `ezzzzz в ноги`, `${randomTarget} нуль ливай`, `кто 1х1 на спавн?`, `${randomTarget} софтер оффни киллауру`, `мать в канаве ${randomTarget}` ];
                 return toxic[Math.floor(Math.random() * toxic.length)];
             } 
             
             if (bot.stats.wealth >= 1 && Math.random() > 0.5) {
-                // Барыга
                 const item = items[Math.floor(Math.random() * items.length)];
                 const price = prices[Math.floor(Math.random() * prices.length)];
-                const trade = [
-                    `! продам ${item} за ${price}`, `куплю ${item} в лс`,
-                    `чекайте аук сливаю ресы`, `кто даст ${item} за монеты?`
-                ];
+                const trade = [ `! продам ${item} за ${price}`, `куплю ${item} в лс`, `чекайте аук сливаю ресы`, `кто даст ${item} за монеты?` ];
                 return trade[Math.floor(Math.random() * trade.length)];
             }
 
-            // Новичок / Бомж
-            const noob = [
-                `кто приютит я без ресов`, `дайте ресов пж`, `как тут приватить?`,
-                `тп на спавн плиз`, `где мистик?`
-            ];
+            const noob = [ `кто приютит я без ресов`, `дайте ресов пж`, `как тут приватить?`, `тп на спавн плиз`, `где мистик?` ];
             return noob[Math.floor(Math.random() * noob.length)];
         }
 
